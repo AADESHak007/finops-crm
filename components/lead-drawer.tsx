@@ -26,6 +26,7 @@ interface LeadDrawerProps {
   onOpenCallModal: () => void;
   onOpenProposalGen: () => void;
   onMarkSignedAndPaid: () => void;
+  onDeleteLead?: (id: string) => void;
   readOnly?: boolean;
 }
 
@@ -43,6 +44,7 @@ export function LeadDetailDrawer({
   onOpenCallModal,
   onOpenProposalGen,
   onMarkSignedAndPaid,
+  onDeleteLead,
   readOnly = false,
 }: LeadDrawerProps) {
   if (!lead) return null;
@@ -67,12 +69,27 @@ export function LeadDetailDrawer({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200/60 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {!readOnly && onDeleteLead && (
+              <button
+                onClick={() => {
+                  if (confirm(`Are you sure you want to delete ${lead.company}?`)) {
+                    onDeleteLead(lead.id);
+                  }
+                }}
+                className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors text-xs font-mono font-bold"
+                title="Delete Lead"
+              >
+                Delete
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200/60 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Interactive SOP Stepper */}

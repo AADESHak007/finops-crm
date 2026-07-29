@@ -1,20 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
-import { Plus, Search, Filter, Flame, CheckCircle2, Phone, FileText, Sparkles, ArrowRight } from "lucide-react";
+import { Plus, Search, Sparkles, Loader2 } from "lucide-react";
 import { LeadDetailDrawer, Lead } from "@/components/lead-drawer";
 import { CallOutcomeModal } from "@/components/call-modal";
-
-const initialLeads: Lead[] = [
-  { id: "1", company: "Apex Financial", contact: "Sarah Jenkins (CFO)", phone: "+1 (555) 234-5678", email: "sarah@apex.io", arr: "$120,000", score: 94, stage: 1, cloudSpend: "$12.4k/mo AWS", tags: ["High Margin", "Enterprise"] },
-  { id: "2", company: "DataPulse AI", contact: "Marcus Vance (VP Eng)", phone: "+1 (555) 345-6789", email: "marcus@datapulse.ai", arr: "$48,000", score: 78, stage: 1, cloudSpend: "$4.1k/mo GCP", tags: ["Growth"] },
-  { id: "3", company: "CloudScale Logic", contact: "David Wu (FinOps Lead)", phone: "+1 (555) 876-5432", email: "david@cloudscale.io", arr: "$85,000", score: 88, stage: 2, cloudSpend: "$18.9k/mo Multi-cloud", tags: ["FinOps Optimization"] },
-  { id: "4", company: "Nova Pay Tech", contact: "Elena Rostova (CTO)", phone: "+1 (555) 901-2345", email: "elena@novapay.com", arr: "$64,000", score: 82, stage: 3, cloudSpend: "$8.2k/mo AWS", tags: ["Fintech"] },
-  { id: "5", company: "Vanguard Quant Labs", contact: "Arthur Pendelton (MD)", phone: "+1 (555) 678-9012", email: "arthur@vanguard.io", arr: "$210,000", score: 96, stage: 4, cloudSpend: "$42.0k/mo AWS", tags: ["Enterprise VIP"] },
-  { id: "6", company: "Hyperion Defense", contact: "Dr. Karen Lee", phone: "+1 (555) 432-1098", email: "karen@hyperion.def", arr: "$150,000", score: 91, stage: 5, cloudSpend: "$28.0k/mo GovCloud", tags: ["Security"] },
-];
+import { CreateDealModal } from "@/components/create-deal-modal";
 
 const columns = [
   { stage: 1, title: "1. Outreach", color: "border-blue-500" },
@@ -25,11 +17,32 @@ const columns = [
 ];
 
 export default function LeadsPage() {
-  const [leads, setLeads] = useState<Lead[]>(initialLeads);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [showConfettiToast, setShowConfettiToast] = useState(false);
+
+  const fetchLeads = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/leads");
+      if (res.ok) {
+        const data = await res.json();
+        setLeads(data);
+      }
+    } catch (err) {
+      console.error("Failed to load leads from database:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeads();
+  }, []);
 
   const filteredLeads = leads.filter(
     (l) =>
@@ -41,31 +54,97 @@ export default function LeadsPage() {
     setActiveLead(lead);
   };
 
-  const handleCallSubmitOutcome = (outcome: string, notes: string) => {
+  const handleCreateDealSuccess = (newLead: Lead) => {
+    setLeads((prev) => [newLead, ...prev]);
+  };
+
+  const handleDeleteLead = async (id: string) => {
+    try {
+      const res = await fetch(`/api/leads/${id}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        setLeads((prev) => prev.filter((l) => l.id !== id));
+        setActiveLead(null);
+      }
+    } catch (err) {
+      console.error("Failed to delete lead:", err);
+    }
+  };
+
+  const handleCallSubmitOutcome = async (outcome: string, notes: string) => {
     setIsCallModalOpen(false);
     if (!activeLead) return;
 
-    const nextStage = Math.min(activeLead.stage + 1, 5);
-    const updated = leads.map((l) => (l.id === activeLead.id ? { ...l, stage: nextStage } : l));
-    setLeads(updated);
-    setActiveLead({ ...activeLead, stage: nextStage });
+    try {
+      const res = await fetch("/api/calls", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leadId: activeLead.id,
+          outcome,
+          notes,
+          durationSeconds: 120,
+        }),
+      });
+
+      if (res.ok) {
+        const { lead: updatedLead } = await res.json();
+        setLeads((prev) => prev.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
+        setActiveLead(updatedLead);
+      }
+    } catch (err) {
+      console.error("Failed to submit call outcome:", err);
+    }
   };
 
-  const handleGenerateProposal = () => {
+  const handleGenerateProposal = async () => {
     if (!activeLead) return;
-    const updated = leads.map((l) => (l.id === activeLead.id ? { ...l, stage: 4 } : l));
-    setLeads(updated);
-    setActiveLead({ ...activeLead, stage: 4 });
+    try {
+      const res = await fetch(`/api/leads/${activeLead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stage: 4 }),
+      });
+
+      if (res.ok) {
+        const updated = await res.json();
+        setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+        setActiveLead(updated);
+      }
+    } catch (err) {
+      console.error("Failed to advance stage to Proposal:", err);
+    }
   };
 
-  const handleMarkSignedAndPaid = () => {
+  const handleMarkSignedAndPaid = async () => {
     if (!activeLead) return;
-    const updated = leads.map((l) => (l.id === activeLead.id ? { ...l, stage: 5 } : l));
-    setLeads(updated);
-    setActiveLead({ ...activeLead, stage: 5 });
+    try {
+      const res = await fetch(`/api/leads/${activeLead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stage: 5 }),
+      });
 
-    setShowConfettiToast(true);
-    setTimeout(() => setShowConfettiToast(false), 4000);
+      if (res.ok) {
+        const updated = await res.json();
+        setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+        setActiveLead(updated);
+        setShowConfettiToast(true);
+        setTimeout(() => setShowConfettiToast(false), 4000);
+      }
+    } catch (err) {
+      console.error("Failed to mark lead signed and paid:", err);
+    }
+  };
+
+  const calculateTotalPipeline = () => {
+    const total = leads.reduce((acc, lead) => {
+      const val = parseInt(lead.arr.replace(/[^0-9]/g, ""), 10) || 0;
+      return acc + val;
+    }, 0);
+    return total.toLocaleString();
   };
 
   return (
@@ -99,55 +178,69 @@ export default function LeadsPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <div className="flex items-center gap-4 w-full sm:w-auto justify-end">
               <div className="text-xs font-mono text-slate-500">
-                Pipeline Value: <strong className="text-slate-900 font-bold">$677,000 ARR</strong>
+                Pipeline Value: <strong className="text-slate-900 font-bold">${calculateTotalPipeline()} ARR</strong>
               </div>
+
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs px-3.5 py-2 rounded-md shadow-sm transition-colors flex items-center gap-1.5"
+              >
+                <Plus className="w-4 h-4" />
+                <span>New Deal</span>
+              </button>
             </div>
           </div>
 
           {/* Kanban Columns */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 flex-1 overflow-x-auto pb-4">
-            {columns.map((col) => {
-              const colLeads = filteredLeads.filter((l) => l.stage === col.stage);
+          {loading ? (
+            <div className="flex-1 flex items-center justify-center text-slate-500 gap-2 text-xs font-mono">
+              <Loader2 className="w-5 h-5 animate-spin text-blue-600" /> Loading CRM Pipeline from Aiven MySQL...
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 flex-1 overflow-x-auto pb-4">
+              {columns.map((col) => {
+                const colLeads = filteredLeads.filter((l) => l.stage === col.stage);
 
-              return (
-                <div key={col.stage} className="flex flex-col rounded-xl border border-slate-200 bg-slate-100/60 p-3 h-full">
-                  <div className={`flex items-center justify-between pb-2 mb-3 border-b-2 ${col.color}`}>
-                    <h3 className="font-bold text-xs text-slate-900 truncate">{col.title}</h3>
-                    <span className="text-[10px] font-mono font-bold bg-white text-slate-600 px-2 py-0.5 rounded-full border border-slate-200">
-                      {colLeads.length}
-                    </span>
-                  </div>
+                return (
+                  <div key={col.stage} className="flex flex-col rounded-xl border border-slate-200 bg-slate-100/60 p-3 h-full">
+                    <div className={`flex items-center justify-between pb-2 mb-3 border-b-2 ${col.color}`}>
+                      <h3 className="font-bold text-xs text-slate-900 truncate">{col.title}</h3>
+                      <span className="text-[10px] font-mono font-bold bg-white text-slate-600 px-2 py-0.5 rounded-full border border-slate-200">
+                        {colLeads.length}
+                      </span>
+                    </div>
 
-                  <div className="space-y-3 overflow-y-auto flex-1 pr-1">
-                    {colLeads.map((lead) => (
-                      <div
-                        key={lead.id}
-                        onClick={() => handleOpenLead(lead)}
-                        className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all hover:border-blue-400 cursor-pointer space-y-3"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <div className="font-bold text-xs text-slate-900">{lead.company}</div>
-                            <div className="text-[11px] text-slate-500 mt-0.5">{lead.contact}</div>
+                    <div className="space-y-3 overflow-y-auto flex-1 pr-1">
+                      {colLeads.map((lead) => (
+                        <div
+                          key={lead.id}
+                          onClick={() => handleOpenLead(lead)}
+                          className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all hover:border-blue-400 cursor-pointer space-y-3"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="font-bold text-xs text-slate-900">{lead.company}</div>
+                              <div className="text-[11px] text-slate-500 mt-0.5">{lead.contact}</div>
+                            </div>
+                            <span className="text-[10px] font-mono font-bold bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">
+                              {lead.score}
+                            </span>
                           </div>
-                          <span className="text-[10px] font-mono font-bold bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">
-                            {lead.score}
-                          </span>
-                        </div>
 
-                        <div className="flex items-center justify-between text-xs font-mono pt-2 border-t border-slate-100">
-                          <span className="font-extrabold text-slate-900">{lead.arr}</span>
-                          <span className="text-slate-400 text-[10px]">{lead.cloudSpend}</span>
+                          <div className="flex items-center justify-between text-xs font-mono pt-2 border-t border-slate-100">
+                            <span className="font-extrabold text-slate-900">{lead.arr}</span>
+                            <span className="text-slate-400 text-[10px]">{lead.cloudSpend}</span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </main>
       </div>
 
@@ -157,6 +250,7 @@ export default function LeadsPage() {
         onOpenCallModal={() => setIsCallModalOpen(true)}
         onOpenProposalGen={handleGenerateProposal}
         onMarkSignedAndPaid={handleMarkSignedAndPaid}
+        onDeleteLead={handleDeleteLead}
       />
 
       <CallOutcomeModal
@@ -165,6 +259,12 @@ export default function LeadsPage() {
         contactName={activeLead?.contact || ""}
         onClose={() => setIsCallModalOpen(false)}
         onSubmitOutcome={handleCallSubmitOutcome}
+      />
+
+      <CreateDealModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={handleCreateDealSuccess}
       />
     </div>
   );

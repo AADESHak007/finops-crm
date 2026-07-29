@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Lead {
+  id               String    @id @default(uuid())
+  company          String
+  contact          String
+  phone            String
+  email            String    @unique
+  arr              String
+  score            Int       @default(0)
+  stage            Int       @default(1)
+  cloudSpend       String    @default("$0.0k/mo")
+  tags             Json?
+  source           String    @default("website_form")
+  budgetMatchScore Int       @default(0)
+  engagementScore  Int       @default(0)
+  conversionScore  Float     @default(0)
+  isUnsubscribed   Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  callLogs         CallLog[]
+
+  @@map("leads")
+}
+
+model CallLog {
+  id              String   @id @default(uuid())
+  leadId          String
+  outcome         String
+  durationSeconds Int      @default(0)
+  notes           String   @db.Text
+  createdAt       DateTime @default(now())
+  lead            Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@map("call_logs")
+}
+
+model Customer {
+  id              String   @id @default(uuid())
+  name            String
+  industry        String
+  arr             String
+  cogsMargin      String   @default("75.0%")
+  stripeStatus    String   @default("Active")
+  cloudSpend      String   @default("$10,000/mo")
+  contractRenewal String   @default("2026-12-31")
+  healthScore     Int      @default(85)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("customers")
+}
