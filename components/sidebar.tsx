@@ -35,23 +35,17 @@ export function Sidebar() {
     <aside className="w-64 bg-[#0f172a] text-slate-300 flex flex-col h-screen sticky top-0 border-r border-slate-800 select-none flex-shrink-0">
       {/* Brand Header */}
       <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-        <Link href="/dashboard" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-sm shadow-blue-500/30">
-            F
-          </div>
-          <div>
-            <span className="font-semibold text-white tracking-tight text-base block leading-none">
-              FinOps CRM
-            </span>
-            <span className="text-[10px] font-mono text-slate-400 mt-1 block">
-              Enterprise v2.4
-            </span>
-          </div>
+        <Link href="/dashboard" className="flex items-center w-full">
+          <img
+            src="/fin-ops-logo-light-bg.png"
+            alt="FinOps CRM Logo"
+            className="h-14 max-w-full w-auto object-contain rounded"
+          />
         </Link>
       </div>
 
-      {/* Org Selector */}
-      <div className="px-3 py-3">
+      {/* Org Selector (Hidden for now) */}
+      {/* <div className="px-3 py-3">
         <button className="w-full flex items-center justify-between p-2 rounded-md bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 transition-colors text-xs font-medium text-slate-200">
           <div className="flex items-center gap-2 truncate">
             <Building2 className="w-4 h-4 text-blue-400 flex-shrink-0" />
@@ -59,7 +53,7 @@ export function Sidebar() {
           </div>
           <ChevronDown className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
         </button>
-      </div>
+      </div> */}
 
       {/* Navigation List */}
       <div className="px-3 py-2 flex-1 space-y-1">
