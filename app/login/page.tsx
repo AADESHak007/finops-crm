@@ -16,9 +16,9 @@ export default function LoginPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 text-center space-y-3">
         <div className="flex justify-center">
           <img
-            src="/fin-ops-logo-light-bg.png"
+            src="/logo.png"
             alt="FinOps CRM Logo"
-            className="h-16 w-auto object-contain rounded-xl shadow-lg"
+            className="h-28 w-auto object-contain drop-shadow-lg"
           />
         </div>
         <h2 className="text-2xl font-extrabold tracking-tight text-white">

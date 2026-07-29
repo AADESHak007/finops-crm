@@ -34,12 +34,12 @@ export function Sidebar() {
   return (
     <aside className="w-64 bg-[#0f172a] text-slate-300 flex flex-col h-screen sticky top-0 border-r border-slate-800 select-none flex-shrink-0">
       {/* Brand Header */}
-      <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-        <Link href="/dashboard" className="flex items-center w-full">
+      <div className="px-3 py-2 border-b border-slate-800">
+        <Link href="/dashboard" className="block">
           <img
-            src="/fin-ops-logo-light-bg.png"
+            src="/logo.png"
             alt="FinOps CRM Logo"
-            className="h-14 max-w-full w-auto object-contain rounded"
+            className="h-24 w-auto object-contain"
           />
         </Link>
       </div>
